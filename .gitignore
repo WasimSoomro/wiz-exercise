@@ -1,0 +1,20 @@
+# macOS
+.DS_Store
+
+# Editors
+.vscode/
+.idea/
+
+# Terraform
+**/.terraform/*
+**/.terraform.lock.hcl
+**/terraform.tfstate
+**/terraform.tfstate.*
+**/crash.log
+**/crash.*.log
+**/*.tfplan
+**/*.tfvars
+**/*.tfvars.json
+
+# kube
+.kube/
