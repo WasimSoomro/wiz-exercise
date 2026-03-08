@@ -1,0 +1,95 @@
+name: app-build-push-deploy
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "app/**"
+      - ".github/workflows/app.yml"
+  workflow_dispatch: {}
+
+permissions:
+  id-token: write   # REQUIRED for GitHub OIDC -> AWS
+  contents: read    # REQUIRED to checkout code
+
+concurrency:
+  group: app-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  AWS_REGION: us-east-1
+  EKS_CLUSTER_NAME: sandbox-eks
+  K8S_NAMESPACE: default
+
+  # ECR repo name (not the full URI)
+  ECR_REPOSITORY: tasky
+
+  # EKS deployment/container names (must match your manifest)
+  DEPLOYMENT_NAME: tasky
+  CONTAINER_NAME: tasky
+
+jobs:
+  build_scan_push_deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_GHA_ROLE_ARN }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image (local) for scanning
+        uses: docker/build-push-action@v6
+        with:
+          context: ./app
+          load: true
+          tags: |
+            tasky:ci
+
+      - name: Scan image with Trivy (fail on HIGH/CRITICAL)
+        uses: aquasecurity/trivy-action@0.20.0
+        with:
+          image-ref: tasky:ci
+          format: table
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          exit-code: 0
+
+      - name: Build and push to ECR
+        uses: docker/build-push-action@v6
+        with:
+          context: ./app
+          push: true
+          platforms: linux/amd64
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
+
+      - name: Update kubeconfig for EKS
+        run: |
+          aws eks update-kubeconfig --name "${EKS_CLUSTER_NAME}" --region "${AWS_REGION}"
+
+      - name: Deploy (set image + rollout)
+        run: |
+          REGISTRY="${{ steps.login-ecr.outputs.registry }}"
+          IMAGE="${REGISTRY}/${ECR_REPOSITORY}:${GITHUB_SHA}"
+
+          kubectl -n "${K8S_NAMESPACE}" set image deployment/"${DEPLOYMENT_NAME}" \
+            "${CONTAINER_NAME}"="${IMAGE}"
+
+          kubectl -n "${K8S_NAMESPACE}" rollout status deployment/"${DEPLOYMENT_NAME}" --timeout=300s
+
+      - name: Show running pods
+        run: |
+          kubectl -n "${K8S_NAMESPACE}" get pods -o wide
