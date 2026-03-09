@@ -9,6 +9,8 @@ module "eks" {
   cluster_name    = local.cluster_name
   cluster_version = "1.29"
 
+  cluster_enabled_log_types = ["api", "audit", "authenticator"]
+
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets # subnet_ids = private_subnets =  “cluster in private subnet”
 
@@ -16,6 +18,7 @@ module "eks" {
   cluster_endpoint_public_access = true # endpoint public access = true = lets your laptop run kubectl easily
 
 
+  
   enable_cluster_creator_admin_permissions = true
 
   eks_managed_node_groups = {
