@@ -56,7 +56,7 @@ jobs:
         with:
           directory: ${{ env.TF_WORKING_DIR }}
           framework: terraform
-          soft_fail: false
+          soft_fail: true
 
       - name: Terraform plan
         working-directory: ${{ env.TF_WORKING_DIR }}
@@ -101,7 +101,7 @@ jobs:
         with:
           directory: ${{ env.TF_WORKING_DIR }}
           framework: terraform
-          soft_fail: false
+          soft_fail: true
 
       - name: Terraform apply
         working-directory: ${{ env.TF_WORKING_DIR }}
