@@ -51,6 +51,13 @@ jobs:
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform validate
 
+      - name: Checkov IaC scan
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: ${{ env.TF_WORKING_DIR }}
+          framework: terraform
+          soft_fail: false
+
       - name: Terraform plan
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform plan -no-color -out=tfplan
@@ -88,6 +95,13 @@ jobs:
       - name: Terraform init
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform init
+
+      - name: Checkov IaC scan
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: ${{ env.TF_WORKING_DIR }}
+          framework: terraform
+          soft_fail: false
 
       - name: Terraform apply
         working-directory: ${{ env.TF_WORKING_DIR }}
