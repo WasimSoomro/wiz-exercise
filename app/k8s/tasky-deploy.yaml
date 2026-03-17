@@ -16,7 +16,7 @@ spec:
       serviceAccountName: tasky-sa
       containers:
       - name: tasky
-        image: 699475911376.dkr.ecr.us-east-1.amazonaws.com/tasky:wiz
+        image: 903685415680.dkr.ecr.us-east-1.amazonaws.com/tasky:wiz
         ports:
         - containerPort: 8080
         envFrom:
